@@ -1,3 +1,4 @@
+
 INSERT INTO artists (stage_name, country, genre, active) VALUES
     ('Solar Beat', 'Colombia', 'Electronica', TRUE),
     ('Neon Waves', 'Mexico', 'Pop', TRUE),

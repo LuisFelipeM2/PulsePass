@@ -36,7 +36,8 @@ public class UserProfile {
  
     @Column(name = "birth_date")
     private LocalDate birthDate;
- 
+    
+    // Lado DUEÑO del 1:1: FK user_id con UNIQUE (BR-004)
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;

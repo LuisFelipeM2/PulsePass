@@ -30,7 +30,7 @@ public class Ticket {
     @Column(name = "type", nullable = false, length = 20)
     private TicketType type;
  
-    
+    // BR-007/NFR-008: BigDecimal, nunca float/double
     @Column(name = "price", nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
  
@@ -41,12 +41,12 @@ public class Ticket {
     @Column(name = "purchase_date", nullable = false)
     private LocalDateTime purchaseDate;
  
-    
+    // BR-005: Ticket pertenece a EXACTAMENTE un User -> nullable = false
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
  
-    
+    // BR-005: Ticket pertenece a EXACTAMENTE un Event -> nullable = false
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;

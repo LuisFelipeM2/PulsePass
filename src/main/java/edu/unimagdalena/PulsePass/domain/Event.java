@@ -33,7 +33,8 @@ public class Event {
  
     @Column(name = "description")
     private String description;
- 
+    
+    // BR-008: enums por NOMBRE (STRING), nunca por ordinal
     
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false, length = 30)
@@ -49,11 +50,11 @@ public class Event {
     @Column(name = "minimum_age", nullable = false)
     private Integer minimumAge;
  
-    
+    // FR-EVT-006: opcional, agregada en V3
     @Column(name = "streaming_url", length = 500)
     private String streamingUrl;
  
-   
+    // BR-001: todo Event pertenece a EXACTAMENTE un Venue -> nullable = false
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "venue_id", nullable = false)
     private Venue venue;
