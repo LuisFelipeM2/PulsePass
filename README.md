@@ -30,7 +30,7 @@ src/
 ```
 
 
-⚙️ Configuración y Requisitos Previos
+# ⚙️ Configuración y Requisitos Previos
 Antes de ejecutar el proyecto, asegúrate de contar con lo siguiente instalado en tu equipo:
 
 JDK 17 o superior.
@@ -39,9 +39,10 @@ Maven (o utilizar el wrapper ./mvnw).
 
 Una instancia de PostgreSQL corriendo localmente.
 
-1. Configuración de la Base de Datos
+# 1. Configuración de la Base de Datos
 Modifica el archivo src/main/resources/application.yaml con tus credenciales locales de PostgreSQL:
 
+```text
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/pulsepass_db
@@ -53,15 +54,17 @@ spring:
     show-sql: true
   flyway:
     enabled: true
+```
 
-
-🧪 Ejecución de Pruebas
+#🧪 Ejecución de Pruebas
 Para garantizar la integridad del modelo de datos, las restricciones UNIQUE, CHECK y las consultas personalizadas JPQL, el proyecto cuenta con una suite completa de pruebas de integración.
 
 Ejecuta todas las pruebas con Maven:
 
 Bash
+```text
 mvn clean test
+```
 
-📄 Migraciones de Base de Datos (Flyway)
+#📄 Migraciones de Base de Datos (Flyway)
 El control del esquema se maneja estrictamente mediante scripts versionados ubicados en src/main/resources/db/migration/, asegurando consistencia entre los entornos de desarrollo y producción.
