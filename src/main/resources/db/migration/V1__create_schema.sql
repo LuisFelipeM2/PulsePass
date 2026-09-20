@@ -12,7 +12,7 @@ CREATE TABLE venues (
 
     CONSTRAINT uq_venues_code UNIQUE (code),  -- FR-VEN-002 / BR-009         
     CONSTRAINT ck_venues_capacity CHECK (capacity > 0) -- FR-VEN-003
-)
+);
 
 -- BR-001: todo Event pertenece a exactamente un Venue -> FK NOT NULL 
 
@@ -37,7 +37,7 @@ CREATE TABLE events (
         'DRAFT', 'PUBLISHED', 'SOLD_OUT', 'CANCELLED', 'FINISHED'
     )), -- FR-EVT-003
     CONSTRAINT ck_events_minimum_age CHECK (minimum_age >= 0)
-)
+);
 
 CREATE INDEX idx_events_venue_id ON events (venue_id); -- FR-VEN-004
 CREATE INDEX idx_events_status_date ON events (status, event_date); -- FR-EVT-005
@@ -102,7 +102,7 @@ CREATE TABLE tickets (
     type            VARCHAR(20)     NOT NULL,
     price           NUMERIC(10, 2)  NOT NULL,
     status          VARCHAR(20)     NOT NULL,
-    purchase_date   TIMESTAMP       NOT NULL DEFAULT now(),
+    purchase_date   TIMESTAMP       NOT NULL DEFAULT now(), 
     user_id         BIGINT          NOT NULL,
     event_id        BIGINT          NOT NULL,
 
@@ -111,7 +111,7 @@ CREATE TABLE tickets (
         REFERENCES users (id),
     CONSTRAINT fk_tickets_event FOREIGN KEY (event_id)
         REFERENCES events (id),
-
+        
     CONSTRAINT ck_tickets_price CHECK (price >= 0), -- FR-TKT-003         
     CONSTRAINT ck_tickets_type CHECK (type IN (             
         'GENERAL', 'VIP', 'BACKSTAGE', 'STUDENT'
