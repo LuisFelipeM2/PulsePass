@@ -56,7 +56,7 @@ spring:
     enabled: true
 ```
 
-#🧪 Ejecución de Pruebas
+#  🧪 Ejecución de Pruebas
 Para garantizar la integridad del modelo de datos, las restricciones UNIQUE, CHECK y las consultas personalizadas JPQL, el proyecto cuenta con una suite completa de pruebas de integración.
 
 Ejecuta todas las pruebas con Maven:
@@ -66,5 +66,11 @@ Bash
 mvn clean test
 ```
 
-#📄 Migraciones de Base de Datos (Flyway)
+# 📄 Migraciones de Base de Datos (Flyway)
 El control del esquema se maneja estrictamente mediante scripts versionados ubicados en src/main/resources/db/migration/, asegurando consistencia entre los entornos de desarrollo y producción.
+
+## 👥 Autores
+
+* **Julio Cesar Carrillo Correa** - *Desarrollo Backend / Capa de Persistencia*
+* **Luis Felipe Muñoz Camacho** - *Desarrollo Backend / Capa de Persistencia*
+* Universidad del Magdalena
