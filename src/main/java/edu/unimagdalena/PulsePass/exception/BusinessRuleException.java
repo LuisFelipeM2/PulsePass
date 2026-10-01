@@ -1,5 +1,10 @@
 package edu.unimagdalena.PulsePass.exception;
 
-public class BusinessRuleException {
-    
+//Sección 35: se lanza cuando el recurso existe pero la operación no es válida según las reglas de negocio.
+
+
+public class BusinessRuleException extends RuntimeException {
+    public BusinessRuleException(String message) {
+        super(message);
+    }
 }

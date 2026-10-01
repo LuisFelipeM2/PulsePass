@@ -1,5 +1,10 @@
 package edu.unimagdalena.PulsePass.exception;
 
-public class DuplicateResourceException {
-    
+
+//Sección 35: se lanza cuando hay un conflicto de unicidad.
+
+public class DuplicateResourceException extends RuntimeException {
+    public DuplicateResourceException(String message) {
+        super(message);
+    }
 }
