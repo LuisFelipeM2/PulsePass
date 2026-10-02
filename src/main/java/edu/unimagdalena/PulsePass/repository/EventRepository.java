@@ -16,6 +16,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     // Mecanismo: Query Method (seccion 14, fila "Buscar evento por eventCode").
     Optional<Event> findByEventCode(String eventCode);
 
+    boolean existsByEventCode(String eventCode); //Seccion 32, nueva busqueda implementada en taller de servicios
+    
     // FR-EVT-005: "Consultar eventos PUBLISHED ordenados por fecha ascendente."
     // Mecanismo: Query Method (seccion 14, fila "Eventos publicados ordenados por fecha").
     List<Event> findByStatusOrderByEventDateAsc(EventStatus status);

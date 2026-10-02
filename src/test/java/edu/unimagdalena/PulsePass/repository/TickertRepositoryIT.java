@@ -99,7 +99,7 @@ class TicketRepositoryIT {
         assertThat(guardado.getEvent().getEventCode()).isEqualTo("EVT-TKT-01");
     }
  
-    @Test
+    @Test 
     void deberiaEncontrarTicketsDeUnUsuarioPorEmailYPorEmailConStatus() {
         Venue venue = crearVenue("VEN-TKT-02");
         Event evento = crearEvento("EVT-TKT-02", venue, LocalDateTime.of(2026, 7, 1, 20, 0));
