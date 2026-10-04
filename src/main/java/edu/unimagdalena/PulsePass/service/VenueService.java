@@ -1,5 +1,10 @@
 package edu.unimagdalena.PulsePass.service;
 
-public class VenueService {
-    
+import java.util.List;
+
+import edu.unimagdalena.PulsePass.dto.response.VenueResponse;
+
+public interface VenueService {
+    VenueResponse findByCode(String code);
+    List<VenueResponse> findActiveVenues();
 }
