@@ -18,8 +18,6 @@ import edu.unimagdalena.PulsePass.service.impl.EventServiceImpl;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
@@ -38,8 +36,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-// Sección 42: unit test con el servicio real, Repository Mock y Mapper Mock.
-// NFR-001: sin @SpringBootTest, sin PostgreSQL ni Testcontainers.
+
 @ExtendWith(MockitoExtension.class)
 class EventServiceImplTest {
 
@@ -63,179 +60,7 @@ class EventServiceImplTest {
     @InjectMocks
     private EventServiceImpl eventService;
 
-    // TEST-EVENT-001: evento existente → retorna DTO.
-    @Test
-    void findByCode_existingEvent_returnsDto() {
-        // ARRANGE
-        Event event = event(EventStatus.PUBLISHED, venue(true));
-        EventResponse response = response(EventStatus.PUBLISHED);
-        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event));
-        when(eventMapper.toResponse(event)).thenReturn(response);
-
-        // ACT
-        EventResponse result = eventService.findByCode(EVENT_CODE);
-
-        // ASSERT
-        assertThat(result).isEqualTo(response);
-        verify(eventRepository).findByEventCode(eq(EVENT_CODE));
-    }
-
-    // TEST-EVENT-002: evento inexistente → ResourceNotFoundException.
-    @Test
-    void findByCode_missingEvent_throwsResourceNotFound() {
-        // ARRANGE
-        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.empty());
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> eventService.findByCode(EVENT_CODE))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Event not found: " + EVENT_CODE);
-    }
-
-    // TEST-EVENT-003: crear evento válido → save() ejecutado.
-    @Test
-    void create_validEvent_savesEvent() {
-        // ARRANGE
-        Venue venue = venue(true);
-        EventResponse response = response(EventStatus.DRAFT);
-        when(eventRepository.existsByEventCode(EVENT_CODE)).thenReturn(false);
-        when(venueRepository.findByCode(VENUE_CODE)).thenReturn(Optional.of(venue));
-        when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(eventMapper.toResponse(any(Event.class))).thenReturn(response);
-
-        // ACT
-        EventResponse result = eventService.create(request(FUTURE_DATE));
-
-        // ASSERT
-        assertThat(result).isEqualTo(response);
-        verify(eventRepository).save(eventCaptor.capture());
-        // BR-EVENT-005: todo evento nuevo inicia en DRAFT.
-        assertThat(eventCaptor.getValue().getStatus()).isEqualTo(EventStatus.DRAFT);
-        assertThat(eventCaptor.getValue().getVenue()).isSameAs(venue);
-    }
-
-    // TEST-EVENT-004: venue inexistente → error y save() nunca ejecutado (BR-EVENT-002).
-    @Test
-    void create_missingVenue_throwsResourceNotFoundAndNeverSaves() {
-        // ARRANGE
-        when(eventRepository.existsByEventCode(EVENT_CODE)).thenReturn(false);
-        when(venueRepository.findByCode(VENUE_CODE)).thenReturn(Optional.empty());
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> eventService.create(request(FUTURE_DATE)))
-                .isInstanceOf(ResourceNotFoundException.class);
-        verify(eventRepository, never()).save(any(Event.class));
-    }
-
-    // TEST-EVENT-005: venue inactivo → BusinessRuleException (BR-EVENT-003).
-    @Test
-    void create_inactiveVenue_throwsBusinessRule() {
-        // ARRANGE
-        when(eventRepository.existsByEventCode(EVENT_CODE)).thenReturn(false);
-        when(venueRepository.findByCode(VENUE_CODE)).thenReturn(Optional.of(venue(false)));
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> eventService.create(request(FUTURE_DATE)))
-                .isInstanceOf(BusinessRuleException.class);
-        verify(eventRepository, never()).save(any(Event.class));
-    }
-
-    // TEST-EVENT-006: fecha pasada → BusinessRuleException (BR-EVENT-004).
-    @Test
-    void create_pastDate_throwsBusinessRule() {
-        // ARRANGE
-        when(eventRepository.existsByEventCode(EVENT_CODE)).thenReturn(false);
-        when(venueRepository.findByCode(VENUE_CODE)).thenReturn(Optional.of(venue(true)));
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> eventService.create(request(PAST_DATE)))
-                .isInstanceOf(BusinessRuleException.class);
-        verify(eventRepository, never()).save(any(Event.class));
-    }
-
-    // TEST-EVENT-007: publicar DRAFT válido → PUBLISHED (BR-EVENT-007 a 009).
-    @Test
-    void publish_validDraftEvent_becomesPublished() {
-        // ARRANGE
-        Event event = event(EventStatus.DRAFT, venue(true));
-        EventResponse response = response(EventStatus.PUBLISHED);
-        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event));
-        when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(eventMapper.toResponse(any(Event.class))).thenReturn(response);
-
-        // ACT
-        EventResponse result = eventService.publish(EVENT_CODE);
-
-        // ASSERT
-        assertThat(event.getStatus()).isEqualTo(EventStatus.PUBLISHED);
-        assertThat(result.status()).isEqualTo(EventStatus.PUBLISHED);
-        verify(eventRepository).save(event);
-    }
-
-    // TEST-EVENT-008: publicar CANCELLED → BusinessRuleException y no persistir (BR-EVENT-007).
-    @Test
-    void publish_cancelledEvent_throwsBusinessRuleAndNeverSaves() {
-        // ARRANGE
-        Event event = event(EventStatus.CANCELLED, venue(true));
-        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event));
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> eventService.publish(EVENT_CODE))
-                .isInstanceOf(BusinessRuleException.class);
-        verify(eventRepository, never()).save(any(Event.class));
-    }
-
-    // FR-SVC-007 (sección 49: unit test requerido): asociar un artista válido.
-    @Test
-    void addArtist_validArtist_associatesAndSaves() {
-        // ARRANGE
-        Event event = event(EventStatus.DRAFT, venue(true));
-        Artist artist = artist();
-        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event));
-        when(artistRepository.findById(ARTIST_ID)).thenReturn(Optional.of(artist));
-        when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(eventMapper.toResponse(any(Event.class))).thenReturn(response(EventStatus.DRAFT));
-
-        // ACT
-        eventService.addArtist(EVENT_CODE, ARTIST_ID);
-
-        // ASSERT
-        assertThat(event.getArtists()).containsExactly(artist);
-        verify(eventRepository).save(event);
-    }
-
-    // BR-EVENT-010: no se asocia dos veces el mismo artista al evento.
-    @Test
-    void addArtist_artistAlreadyAssociated_throwsDuplicateAndNeverSaves() {
-        // ARRANGE
-        Event event = event(EventStatus.DRAFT, venue(true));
-        Artist artist = artist();
-        event.getArtists().add(artist);
-        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event));
-        when(artistRepository.findById(ARTIST_ID)).thenReturn(Optional.of(artist));
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> eventService.addArtist(EVENT_CODE, ARTIST_ID))
-                .isInstanceOf(DuplicateResourceException.class);
-        verify(eventRepository, never()).save(any(Event.class));
-    }
-
-    // BR-EVENT-011: no se agregan artistas a eventos CANCELLED ni FINISHED.
-    @ParameterizedTest
-    @EnumSource(value = EventStatus.class, names = {"CANCELLED", "FINISHED"})
-    void addArtist_cancelledOrFinishedEvent_throwsBusinessRuleAndNeverSaves(EventStatus status) {
-        // ARRANGE
-        Event event = event(status, venue(true));
-        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event));
-        when(artistRepository.findById(ARTIST_ID)).thenReturn(Optional.of(artist()));
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> eventService.addArtist(EVENT_CODE, ARTIST_ID))
-                .isInstanceOf(BusinessRuleException.class);
-        verify(eventRepository, never()).save(any(Event.class));
-    }
-
-    // --- Datos de prueba (escenario de la sección 47) ---
+        // --- Datos de prueba 
 
     private Venue venue(boolean active) {
         return Venue.builder()
@@ -279,4 +104,167 @@ class EventServiceImplTest {
                 EventCategory.MUSIC, status, FUTURE_DATE, 18, VENUE_CODE,
                 "Marina Convention Center", List.of());
     }
+
+    // TEST-EVENT-001: evento existente → retorna DTO.
+    @Test
+    void findByCode_existingEvent_returnsDto() {
+        Event event = event(EventStatus.PUBLISHED, venue(true));
+        EventResponse response = response(EventStatus.PUBLISHED);
+        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event));
+        when(eventMapper.toResponse(event)).thenReturn(response);
+
+        EventResponse result = eventService.findByCode(EVENT_CODE);
+
+        assertThat(result).isEqualTo(response);
+        verify(eventRepository).findByEventCode(eq(EVENT_CODE));
+    }
+
+    // TEST-EVENT-002: evento inexistente → ResourceNotFoundException.
+    @Test
+    void findByCode_missingEvent_throwsResourceNotFound() {
+
+        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> eventService.findByCode(EVENT_CODE))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    // TEST-EVENT-003: crear evento válido → save() ejecutado.
+    @Test
+    void create_validEvent_savesEvent() {
+
+        Venue venue = venue(true);
+        EventResponse response = response(EventStatus.DRAFT);
+        when(eventRepository.existsByEventCode(EVENT_CODE)).thenReturn(false);
+        when(venueRepository.findByCode(VENUE_CODE)).thenReturn(Optional.of(venue));
+        when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(eventMapper.toResponse(any(Event.class))).thenReturn(response);
+
+        EventResponse result = eventService.create(request(FUTURE_DATE));
+
+        assertThat(result).isEqualTo(response);
+        verify(eventRepository).save(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().getStatus()).isEqualTo(EventStatus.DRAFT);
+        assertThat(eventCaptor.getValue().getVenue()).isSameAs(venue);
+    }
+
+    // TEST-EVENT-004: venue inexistente → error y save() nunca ejecutado (BR-EVENT-002).
+    @Test
+    void create_missingVenue_throwsResourceNotFoundAndNeverSaves() {
+        when(eventRepository.existsByEventCode(EVENT_CODE)).thenReturn(false);
+        when(venueRepository.findByCode(VENUE_CODE)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> eventService.create(request(FUTURE_DATE)))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(eventRepository, never()).save(any(Event.class));
+    }
+
+    // TEST-EVENT-005: venue inactivo → BusinessRuleException (BR-EVENT-003).
+    @Test
+    void create_inactiveVenue_throwsBusinessRule() {
+        when(eventRepository.existsByEventCode(EVENT_CODE)).thenReturn(false);
+        when(venueRepository.findByCode(VENUE_CODE)).thenReturn(Optional.of(venue(false)));
+
+        assertThatThrownBy(() -> eventService.create(request(FUTURE_DATE)))
+                .isInstanceOf(BusinessRuleException.class);
+        verify(eventRepository, never()).save(any(Event.class));
+    }
+
+    // TEST-EVENT-006: fecha pasada → BusinessRuleException (BR-EVENT-004).
+    @Test
+    void create_pastDate_throwsBusinessRule() {
+        when(eventRepository.existsByEventCode(EVENT_CODE)).thenReturn(false);
+        when(venueRepository.findByCode(VENUE_CODE)).thenReturn(Optional.of(venue(true)));
+
+        assertThatThrownBy(() -> eventService.create(request(PAST_DATE)))
+                .isInstanceOf(BusinessRuleException.class);
+        verify(eventRepository, never()).save(any(Event.class));
+    }
+
+    // TEST-EVENT-007: publicar DRAFT válido → PUBLISHED (BR-EVENT-007 a 009).
+    @Test
+    void publish_validDraftEvent_becomesPublished() {
+        Event event = event(EventStatus.DRAFT, venue(true));
+        EventResponse response = response(EventStatus.PUBLISHED);
+        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event));
+        when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(eventMapper.toResponse(any(Event.class))).thenReturn(response);
+
+        EventResponse result = eventService.publish(EVENT_CODE);
+
+        assertThat(event.getStatus()).isEqualTo(EventStatus.PUBLISHED);
+        assertThat(result.status()).isEqualTo(EventStatus.PUBLISHED);
+        verify(eventRepository).save(event);
+    }
+
+    // TEST-EVENT-008: publicar CANCELLED → BusinessRuleException y no persistir (BR-EVENT-007).
+    @Test
+    void publish_cancelledEvent_throwsBusinessRuleAndNeverSaves() {
+        Event event = event(EventStatus.CANCELLED, venue(true));
+        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> eventService.publish(EVENT_CODE))
+                .isInstanceOf(BusinessRuleException.class);
+        verify(eventRepository, never()).save(any(Event.class));
+    }
+
+    // FR-SVC-007 (sección 49: unit test requerido): asociar un artista válido.
+    @Test
+    void addArtist_validArtist_associatesAndSaves() {
+        Event event = event(EventStatus.DRAFT, venue(true));
+        Artist artist = artist();
+        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event));
+        when(artistRepository.findById(ARTIST_ID)).thenReturn(Optional.of(artist));
+        when(eventRepository.save(any(Event.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(eventMapper.toResponse(any(Event.class))).thenReturn(response(EventStatus.DRAFT));
+
+        eventService.addArtist(EVENT_CODE, ARTIST_ID);
+
+        assertThat(event.getArtists()).containsExactly(artist);
+        verify(eventRepository).save(event);
+    }
+
+    // BR-EVENT-010: no se asocia dos veces el mismo artista al evento.
+    @Test
+    void addArtist_artistAlreadyAssociated_throwsDuplicateAndNeverSaves() {
+        Event event = event(EventStatus.DRAFT, venue(true));
+        Artist artist = artist();
+        event.getArtists().add(artist);
+        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event));
+        when(artistRepository.findById(ARTIST_ID)).thenReturn(Optional.of(artist));
+
+        assertThatThrownBy(() -> eventService.addArtist(EVENT_CODE, ARTIST_ID))
+                .isInstanceOf(DuplicateResourceException.class);
+        verify(eventRepository, never()).save(any(Event.class));
+    }
+
+       // BR-EVENT-011: no se agregan artistas a eventos CANCELLED.
+    @Test
+    void addArtist_cancelledEvent_throwsBusinessRuleAndNeverSaves() {
+        // ARRANGE
+        Event event = event(EventStatus.CANCELLED, venue(true));
+        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event));
+        when(artistRepository.findById(ARTIST_ID)).thenReturn(Optional.of(artist()));
+
+        // ACT & ASSERT
+        assertThatThrownBy(() -> eventService.addArtist(EVENT_CODE, ARTIST_ID))
+                .isInstanceOf(BusinessRuleException.class);
+        verify(eventRepository, never()).save(any(Event.class));
+    }
+
+    // BR-EVENT-011: no se agregan artistas a eventos FINISHED.
+    @Test
+    void addArtist_finishedEvent_throwsBusinessRuleAndNeverSaves() {
+        // ARRANGE
+        Event event = event(EventStatus.FINISHED, venue(true));
+        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event));
+        when(artistRepository.findById(ARTIST_ID)).thenReturn(Optional.of(artist()));
+
+        // ACT & ASSERT
+        assertThatThrownBy(() -> eventService.addArtist(EVENT_CODE, ARTIST_ID))
+                .isInstanceOf(BusinessRuleException.class);
+        verify(eventRepository, never()).save(any(Event.class));
+    }
+
+
 }

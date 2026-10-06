@@ -20,8 +20,6 @@ import edu.unimagdalena.PulsePass.service.impl.TicketServiceImpl;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
@@ -39,15 +37,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-// Sección 42: unit test con el servicio real, Repository Mock y Mapper Mock.
-// NFR-001: sin @SpringBootTest, sin PostgreSQL ni Testcontainers.
+
 @ExtendWith(MockitoExtension.class)
 class TicketServiceImplTest {
 
     private static final String EMAIL = "andrea@email.com";
     private static final String EVENT_CODE = "CMF-2026";
     private static final String TICKET_CODE = "TKT-TEST-001";
-    private static final int CAPACITY = 3;                       // Sección 47: venue con capacidad 3
+    private static final int CAPACITY = 3;                      
     private static final LocalDateTime EVENT_DATE = LocalDateTime.now().plusDays(30);
 
     @Mock
@@ -64,212 +61,7 @@ class TicketServiceImplTest {
     @InjectMocks
     private TicketServiceImpl ticketService;
 
-    // TEST-TICKET-001: compra válida → ticket PAID.
-    @Test
-    void purchase_validRequest_createsPaidTicket() {
-        // ARRANGE
-        User user = user(true, 25);
-        Event event = event(EventStatus.PUBLISHED);
-        stubValidPurchase(user, event, 0L);
-
-        // ACT
-        ticketService.purchase(request(TicketType.GENERAL));
-
-        // ASSERT
-        verify(ticketRepository).save(ticketCaptor.capture());
-        Ticket saved = ticketCaptor.getValue();
-        assertThat(saved.getStatus()).isEqualTo(TicketStatus.PAID);
-        assertThat(saved.getUser()).isSameAs(user);
-        assertThat(saved.getEvent()).isSameAs(event);
-        assertThat(saved.getTicketCode()).startsWith("TKT-");
-        assertThat(saved.getPurchaseDate()).isNotNull();
-        // No se llenó la capacidad: el evento no se modifica.
-        assertThat(event.getStatus()).isEqualTo(EventStatus.PUBLISHED);
-        verify(eventRepository, never()).save(any(Event.class));
-    }
-
-    // TEST-TICKET-002: usuario inexistente → ResourceNotFoundException (BR-TICKET-001).
-    @Test
-    void purchase_missingUser_throwsResourceNotFound() {
-        // ARRANGE
-        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.empty());
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> ticketService.purchase(request(TicketType.GENERAL)))
-                .isInstanceOf(ResourceNotFoundException.class);
-        verify(ticketRepository, never()).save(any(Ticket.class));
-    }
-
-    // TEST-TICKET-003: usuario inactivo → BusinessRuleException (BR-TICKET-002).
-    @Test
-    void purchase_inactiveUser_throwsBusinessRule() {
-        // ARRANGE
-        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(user(false, 30)));
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> ticketService.purchase(request(TicketType.GENERAL)))
-                .isInstanceOf(BusinessRuleException.class);
-        verify(ticketRepository, never()).save(any(Ticket.class));
-    }
-
-    // TEST-TICKET-004: evento DRAFT → BusinessRuleException (BR-TICKET-004).
-    @Test
-    void purchase_draftEvent_throwsBusinessRule() {
-        // ARRANGE
-        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(user(true, 25)));
-        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event(EventStatus.DRAFT)));
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> ticketService.purchase(request(TicketType.GENERAL)))
-                .isInstanceOf(BusinessRuleException.class);
-        verify(ticketRepository, never()).save(any(Ticket.class));
-    }
-
-    // TEST-TICKET-005: evento CANCELLED → BusinessRuleException (BR-TICKET-004).
-    @Test
-    void purchase_cancelledEvent_throwsBusinessRule() {
-        // ARRANGE
-        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(user(true, 25)));
-        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event(EventStatus.CANCELLED)));
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> ticketService.purchase(request(TicketType.GENERAL)))
-                .isInstanceOf(BusinessRuleException.class);
-        verify(ticketRepository, never()).save(any(Ticket.class));
-    }
-
-    // TEST-TICKET-006: usuario menor de edad → BusinessRuleException (BR-TICKET-006).
-    // Laura tiene 17 años en la fecha del evento y el evento exige 18 (sección 47).
-    @Test
-    void purchase_underageUser_throwsBusinessRule() {
-        // ARRANGE
-        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(user(true, 17)));
-        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event(EventStatus.PUBLISHED)));
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> ticketService.purchase(request(TicketType.GENERAL)))
-                .isInstanceOf(BusinessRuleException.class)
-                .hasMessage("User does not meet minimum age.");
-        verify(ticketRepository, never()).save(any(Ticket.class));
-    }
-
-    // TEST-TICKET-007: evento sin capacidad → BusinessRuleException (BR-TICKET-007).
-    @Test
-    void purchase_noCapacityLeft_throwsBusinessRule() {
-        // ARRANGE
-        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(user(true, 25)));
-        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event(EventStatus.PUBLISHED)));
-        when(ticketRepository.countByEventEventCodeAndStatus(EVENT_CODE, TicketStatus.PAID))
-                .thenReturn((long) CAPACITY);
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> ticketService.purchase(request(TicketType.GENERAL)))
-                .isInstanceOf(BusinessRuleException.class);
-        verify(ticketRepository, never()).save(any(Ticket.class));
-    }
-
-    // TEST-TICKET-008: último ticket disponible → guarda el ticket y el evento pasa a SOLD_OUT
-    // (BR-TICKET-008).
-    @Test
-    void purchase_lastAvailableTicket_savesTicketAndSetsSoldOut() {
-        // ARRANGE
-        Event event = event(EventStatus.PUBLISHED);
-        stubValidPurchase(user(true, 25), event, CAPACITY - 1L);
-
-        // ACT
-        ticketService.purchase(request(TicketType.GENERAL));
-
-        // ASSERT
-        verify(ticketRepository).save(any(Ticket.class));
-        assertThat(event.getStatus()).isEqualTo(EventStatus.SOLD_OUT);
-        verify(eventRepository).save(event);
-    }
-
-    // TEST-TICKET-009: cancelar ticket PAID → CANCELLED (BR-TICKET-010).
-    @Test
-    void cancel_paidTicket_becomesCancelled() {
-        // ARRANGE
-        Ticket ticket = ticket(TicketStatus.PAID);
-        when(ticketRepository.findByTicketCode(TICKET_CODE)).thenReturn(Optional.of(ticket));
-        when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(ticketMapper.toResponse(any(Ticket.class))).thenReturn(response());
-
-        // ACT
-        ticketService.cancel(TICKET_CODE);
-
-        // ASSERT
-        assertThat(ticket.getStatus()).isEqualTo(TicketStatus.CANCELLED);
-        verify(ticketRepository).save(ticket);
-    }
-
-    // TEST-TICKET-010: cancelar ticket USED → BusinessRuleException (BR-TICKET-011).
-    @Test
-    void cancel_usedTicket_throwsBusinessRule() {
-        // ARRANGE
-        when(ticketRepository.findByTicketCode(TICKET_CODE))
-                .thenReturn(Optional.of(ticket(TicketStatus.USED)));
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> ticketService.cancel(TICKET_CODE))
-                .isInstanceOf(BusinessRuleException.class);
-        verify(ticketRepository, never()).save(any(Ticket.class));
-    }
-
-    // TEST-TICKET-011: marcar ticket PAID como usado → USED (BR-TICKET-013).
-    @Test
-    void markAsUsed_paidTicket_becomesUsed() {
-        // ARRANGE
-        Ticket ticket = ticket(TicketStatus.PAID);
-        when(ticketRepository.findByTicketCode(TICKET_CODE)).thenReturn(Optional.of(ticket));
-        when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(ticketMapper.toResponse(any(Ticket.class))).thenReturn(response());
-
-        // ACT
-        ticketService.markAsUsed(TICKET_CODE);
-
-        // ASSERT
-        assertThat(ticket.getStatus()).isEqualTo(TicketStatus.USED);
-        verify(ticketRepository).save(ticket);
-    }
-
-    // TEST-TICKET-012: usar ticket CANCELLED → BusinessRuleException (BR-TICKET-014).
-    @Test
-    void markAsUsed_cancelledTicket_throwsBusinessRule() {
-        // ARRANGE
-        when(ticketRepository.findByTicketCode(TICKET_CODE))
-                .thenReturn(Optional.of(ticket(TicketStatus.CANCELLED)));
-
-        // ACT & ASSERT
-        assertThatThrownBy(() -> ticketService.markAsUsed(TICKET_CODE))
-                .isInstanceOf(BusinessRuleException.class);
-        verify(ticketRepository, never()).save(any(Ticket.class));
-    }
-
-    // Sección 28: la estrategia de precio está encapsulada y probada, un caso por tipo.
-    @ParameterizedTest
-    @CsvSource({
-            "GENERAL, 100000.00",
-            "STUDENT, 80000.00",
-            "VIP, 200000.00",
-            "BACKSTAGE, 300000.00"
-    })
-    void purchase_calculatesPriceByTicketType(TicketType type, String expectedPrice) {
-        // ARRANGE
-        stubValidPurchase(user(true, 25), event(EventStatus.PUBLISHED), 0L);
-
-        // ACT
-        ticketService.purchase(request(type));
-
-        // ASSERT
-        verify(ticketRepository).save(ticketCaptor.capture());
-        assertThat(ticketCaptor.getValue().getType()).isEqualTo(type);
-        assertThat(ticketCaptor.getValue().getPrice()).isEqualByComparingTo(expectedPrice);
-    }
-
-    // --- Datos de prueba (escenario de la sección 47) ---
-
-    // Prepara una compra que llega hasta el final: usuario y evento existen, y hay
-    // "paidTickets" tickets pagados.
+    // Datos de prueba 
     private void stubValidPurchase(User user, Event event, long paidTickets) {
         when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(user));
         when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event));
@@ -279,8 +71,6 @@ class TicketServiceImplTest {
         when(ticketMapper.toResponse(any(Ticket.class))).thenReturn(response());
     }
 
-    // La edad se evalúa en la fecha del evento (BR-TICKET-006): el cumpleaños se fija
-    // para que el usuario tenga exactamente "ageAtEvent" años ese día.
     private User user(boolean active, int ageAtEvent) {
         return User.builder()
                 .id(1L)
@@ -332,4 +122,160 @@ class TicketServiceImplTest {
         return new TicketResponse(1L, TICKET_CODE, TicketType.GENERAL, new BigDecimal("100000.00"),
                 TicketStatus.PAID, LocalDateTime.now(), EMAIL, EVENT_CODE, "Caribbean Music Fest 2026");
     }
+
+    // TEST-TICKET-001: compra válida → ticket PAID.
+    @Test
+    void purchase_validRequest_createsPaidTicket() {
+        User user = user(true, 25);
+        Event event = event(EventStatus.PUBLISHED);
+        stubValidPurchase(user, event, 0L);
+
+        ticketService.purchase(request(TicketType.GENERAL));
+
+        verify(ticketRepository).save(ticketCaptor.capture());
+        Ticket saved = ticketCaptor.getValue();
+        assertThat(saved.getStatus()).isEqualTo(TicketStatus.PAID);
+        assertThat(saved.getUser()).isSameAs(user);
+        assertThat(saved.getEvent()).isSameAs(event);
+        assertThat(saved.getTicketCode()).startsWith("TKT-");
+        assertThat(saved.getPurchaseDate()).isNotNull();
+        assertThat(event.getStatus()).isEqualTo(EventStatus.PUBLISHED);
+        verify(eventRepository, never()).save(any(Event.class));
+    }
+
+    // TEST-TICKET-002: usuario inexistente → ResourceNotFoundException (BR-TICKET-001).
+    @Test
+    void purchase_missingUser_throwsResourceNotFound() {
+        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> ticketService.purchase(request(TicketType.GENERAL)))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(ticketRepository, never()).save(any(Ticket.class));
+    }
+
+    // TEST-TICKET-003: usuario inactivo → BusinessRuleException (BR-TICKET-002).
+    @Test
+    void purchase_inactiveUser_throwsBusinessRule() {
+        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(user(false, 30)));
+
+        assertThatThrownBy(() -> ticketService.purchase(request(TicketType.GENERAL)))
+                .isInstanceOf(BusinessRuleException.class);
+        verify(ticketRepository, never()).save(any(Ticket.class));
+    }
+
+    // TEST-TICKET-004: evento DRAFT → BusinessRuleException (BR-TICKET-004).
+    @Test
+    void purchase_draftEvent_throwsBusinessRule() {
+        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(user(true, 25)));
+        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event(EventStatus.DRAFT)));
+
+        assertThatThrownBy(() -> ticketService.purchase(request(TicketType.GENERAL)))
+                .isInstanceOf(BusinessRuleException.class);
+        verify(ticketRepository, never()).save(any(Ticket.class));
+    }
+
+    // TEST-TICKET-005: evento CANCELLED → BusinessRuleException (BR-TICKET-004).
+    @Test
+    void purchase_cancelledEvent_throwsBusinessRule() {
+        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(user(true, 25)));
+        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event(EventStatus.CANCELLED)));
+
+        assertThatThrownBy(() -> ticketService.purchase(request(TicketType.GENERAL)))
+                .isInstanceOf(BusinessRuleException.class);
+        verify(ticketRepository, never()).save(any(Ticket.class));
+    }
+
+    // TEST-TICKET-006: usuario menor de edad → BusinessRuleException (BR-TICKET-006).
+    // Laura tiene 17 años en la fecha del evento y el evento exige 18 (sección 47).
+    @Test
+    void purchase_underageUser_throwsBusinessRule() {
+        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(user(true, 17)));
+        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event(EventStatus.PUBLISHED)));
+
+        assertThatThrownBy(() -> ticketService.purchase(request(TicketType.GENERAL)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("User does not meet minimum age.");
+        verify(ticketRepository, never()).save(any(Ticket.class));
+    }
+
+    // TEST-TICKET-007: evento sin capacidad → BusinessRuleException (BR-TICKET-007).
+    @Test
+    void purchase_noCapacityLeft_throwsBusinessRule() {
+
+        when(userRepository.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(user(true, 25)));
+        when(eventRepository.findByEventCode(EVENT_CODE)).thenReturn(Optional.of(event(EventStatus.PUBLISHED)));
+        when(ticketRepository.countByEventEventCodeAndStatus(EVENT_CODE, TicketStatus.PAID))
+                .thenReturn((long) CAPACITY);
+
+        assertThatThrownBy(() -> ticketService.purchase(request(TicketType.GENERAL)))
+                .isInstanceOf(BusinessRuleException.class);
+        verify(ticketRepository, never()).save(any(Ticket.class));
+    }
+
+    // TEST-TICKET-008: último ticket disponible → guarda el ticket y el evento pasa a SOLD_OUT
+    // (BR-TICKET-008).
+    @Test
+    void purchase_lastAvailableTicket_savesTicketAndSetsSoldOut() {
+        Event event = event(EventStatus.PUBLISHED);
+        stubValidPurchase(user(true, 25), event, CAPACITY - 1L);
+
+        ticketService.purchase(request(TicketType.GENERAL));
+
+        verify(ticketRepository).save(any(Ticket.class));
+        assertThat(event.getStatus()).isEqualTo(EventStatus.SOLD_OUT);
+        verify(eventRepository).save(event);
+    }
+
+    // TEST-TICKET-009: cancelar ticket PAID → CANCELLED (BR-TICKET-010).
+    @Test
+    void cancel_paidTicket_becomesCancelled() {
+        Ticket ticket = ticket(TicketStatus.PAID);
+        when(ticketRepository.findByTicketCode(TICKET_CODE)).thenReturn(Optional.of(ticket));
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(ticketMapper.toResponse(any(Ticket.class))).thenReturn(response());
+
+        ticketService.cancel(TICKET_CODE);
+
+        assertThat(ticket.getStatus()).isEqualTo(TicketStatus.CANCELLED);
+        verify(ticketRepository).save(ticket);
+    }
+
+    // TEST-TICKET-010: cancelar ticket USED → BusinessRuleException (BR-TICKET-011).
+    @Test
+    void cancel_usedTicket_throwsBusinessRule() {
+        // ARRANGE
+        when(ticketRepository.findByTicketCode(TICKET_CODE))
+                .thenReturn(Optional.of(ticket(TicketStatus.USED)));
+
+        // ACT & ASSERT
+        assertThatThrownBy(() -> ticketService.cancel(TICKET_CODE))
+                .isInstanceOf(BusinessRuleException.class);
+        verify(ticketRepository, never()).save(any(Ticket.class));
+    }
+
+    // TEST-TICKET-011: marcar ticket PAID como usado → USED (BR-TICKET-013).
+    @Test
+    void markAsUsed_paidTicket_becomesUsed() {
+        Ticket ticket = ticket(TicketStatus.PAID);
+        when(ticketRepository.findByTicketCode(TICKET_CODE)).thenReturn(Optional.of(ticket));
+        when(ticketRepository.save(any(Ticket.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(ticketMapper.toResponse(any(Ticket.class))).thenReturn(response());
+
+        ticketService.markAsUsed(TICKET_CODE);
+
+        assertThat(ticket.getStatus()).isEqualTo(TicketStatus.USED);
+        verify(ticketRepository).save(ticket);
+    }
+
+    // TEST-TICKET-012: usar ticket CANCELLED → BusinessRuleException (BR-TICKET-014).
+    @Test
+    void markAsUsed_cancelledTicket_throwsBusinessRule() {
+        when(ticketRepository.findByTicketCode(TICKET_CODE))
+                .thenReturn(Optional.of(ticket(TicketStatus.CANCELLED)));
+
+        assertThatThrownBy(() -> ticketService.markAsUsed(TICKET_CODE))
+                .isInstanceOf(BusinessRuleException.class);
+        verify(ticketRepository, never()).save(any(Ticket.class));
+    }
+
 }

@@ -29,8 +29,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-// Sección 42: unit test con el servicio real, Repository Mock y Mapper Mock.
-// NFR-001: sin @SpringBootTest, sin PostgreSQL ni Testcontainers.
+
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
 
@@ -52,10 +51,16 @@ class UserServiceImplTest {
     @InjectMocks
     private UserServiceImpl userService;
 
+    //Datos de prueba
+
+    private RegisterUserRequest request(LocalDate birthDate) {
+        return new RegisterUserRequest(USERNAME, EMAIL, "Andrea", "Perez",
+                "3001788548", "Santa Marta", birthDate);
+    }
+
     // TEST-USER-001: registrar usuario válido.
     @Test
     void register_validUser_savesUserAndProfile() {
-        // ARRANGE
         UserResponse response = new UserResponse(1L, USERNAME, EMAIL, "Andrea", "Perez", true);
         when(userRepository.existsByUsername(USERNAME)).thenReturn(false);
         when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(false);
@@ -63,16 +68,12 @@ class UserServiceImplTest {
         when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userMapper.toResponse(any(User.class))).thenReturn(response);
 
-        // ACT
         UserResponse result = userService.register(request(BIRTH_DATE));
 
-        // ASSERT
         assertThat(result).isEqualTo(response);
         verify(userRepository).save(userCaptor.capture());
         verify(userProfileRepository).save(profileCaptor.capture());
-        // BR-USER-003: todo usuario nuevo inicia con active = true.
         assertThat(userCaptor.getValue().getActive()).isTrue();
-        // BR-USER-004: el perfil queda enlazado al usuario guardado.
         assertThat(profileCaptor.getValue().getUser()).isSameAs(userCaptor.getValue());
         assertThat(profileCaptor.getValue().getBirthDate()).isEqualTo(BIRTH_DATE);
     }
@@ -80,10 +81,8 @@ class UserServiceImplTest {
     // TEST-USER-002: username duplicado → DuplicateResourceException (BR-USER-001).
     @Test
     void register_duplicateUsername_throwsDuplicateAndNeverSaves() {
-        // ARRANGE
         when(userRepository.existsByUsername(USERNAME)).thenReturn(true);
 
-        // ACT & ASSERT
         assertThatThrownBy(() -> userService.register(request(BIRTH_DATE)))
                 .isInstanceOf(DuplicateResourceException.class)
                 .hasMessage("Username already exists.");
@@ -94,14 +93,11 @@ class UserServiceImplTest {
     // TEST-USER-003: email duplicado → DuplicateResourceException (BR-USER-002).
     @Test
     void register_duplicateEmail_throwsDuplicateAndNeverSaves() {
-        // ARRANGE
         when(userRepository.existsByUsername(USERNAME)).thenReturn(false);
         when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(true);
 
-        // ACT & ASSERT
         assertThatThrownBy(() -> userService.register(request(BIRTH_DATE)))
                 .isInstanceOf(DuplicateResourceException.class);
-        // BR-USER-002: la comprobación del email ignora mayúsculas y minúsculas.
         verify(userRepository).existsByEmailIgnoreCase(eq(EMAIL));
         verify(userRepository, never()).save(any(User.class));
         verify(userProfileRepository, never()).save(any(UserProfile.class));
@@ -110,21 +106,12 @@ class UserServiceImplTest {
     // TEST-USER-004: fecha de nacimiento futura → BusinessRuleException (BR-USER-005).
     @Test
     void register_futureBirthDate_throwsBusinessRuleAndNeverSaves() {
-        // ARRANGE
         when(userRepository.existsByUsername(USERNAME)).thenReturn(false);
         when(userRepository.existsByEmailIgnoreCase(EMAIL)).thenReturn(false);
 
-        // ACT & ASSERT
         assertThatThrownBy(() -> userService.register(request(LocalDate.now().plusDays(1))))
                 .isInstanceOf(BusinessRuleException.class);
         verify(userRepository, never()).save(any(User.class));
         verify(userProfileRepository, never()).save(any(UserProfile.class));
-    }
-
-    // --- Datos de prueba (Andrea, escenario de la sección 47) ---
-
-    private RegisterUserRequest request(LocalDate birthDate) {
-        return new RegisterUserRequest(USERNAME, EMAIL, "Andrea", "Perez",
-                "3001234567", "Santa Marta", birthDate);
     }
 }
