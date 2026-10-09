@@ -12,7 +12,7 @@ import edu.unimagdalena.PulsePass.domain.Event;
 
 public interface ArtistRepository extends JpaRepository<Artist, Long> {
     // FR-ART-002: "stageName no puede repetirse." Criterio: "La BD rechaza duplicados."
-    Optional<Artist> findByStageName(String stageName);
+    Optional<Artist> findByStageNameIgnoreCase(String stageName);
 
     // FR-ART-004: "Un artista puede participar en varios eventos." Criterio:
     // "Una consulta JPQL recupera los eventos del artista solicitado."
@@ -23,4 +23,7 @@ public interface ArtistRepository extends JpaRepository<Artist, Long> {
             WHERE a.stageName = :stageName
             """)
     List<Event> findEventsByArtistStageName(@Param ("stageName") String stageName);
+
+    List<Artist> findByActiveTrueOrderByStageNameAsc(); //Seccion 32, nueva busqueda implementada en taller de servicios
+
  }

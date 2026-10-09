@@ -1,5 +1,6 @@
 package edu.unimagdalena.PulsePass.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,4 +12,6 @@ public interface VenueRepository extends JpaRepository<Venue, Long> {
     // FR-VEN-002 / FR-VEN-001: recuperar un venue por su codigo de negocio.
     // Mecanismo: Query Method (seccion 14).
     Optional<Venue> findByCode(String code);
+    List<Venue> findByActiveTrueOrderByNameAsc(); //Seccion 32, nueva busqueda implementada en taller de servicios
+
 }
