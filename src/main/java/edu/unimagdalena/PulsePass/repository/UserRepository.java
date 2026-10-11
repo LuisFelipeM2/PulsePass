@@ -17,4 +17,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // el SQL con LOWER(email)
     
     Optional<User> findByEmailIgnoreCase(String email);
+
+    boolean existsByEmailIgnoreCase(String email);//Seccion 32, nueva busqueda implementada en taller de servicios
+    boolean existsByUsername(String username);//Seccion 32, nueva busqueda implementada en taller de servicios
  }

@@ -2,6 +2,7 @@ package edu.unimagdalena.PulsePass.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -49,6 +50,16 @@ public interface TicketRepository extends JpaRepository <Ticket, Long> {
     // FR-SRC-004: "Consultar tickets cuyo evento sea posterior a una fecha."
     // Criterio: "Los resultados quedan ordenados cronologicamente."
     // Mecanismo: Query Method navegando relacion 
-    List<Ticket> findByEvent_EventDateAfterOrderByEvent_EventDateAsc(LocalDateTime date);
+    
+    List<Ticket> findByEvent_EventDateAfterOrderByEvent_EventDateAsc(LocalDateTime date);//Seccion 32, nueva busqueda implementada en taller de servicios
+
+    Optional<Ticket> findByTicketCode(String ticketCode);//Seccion 32, nueva busqueda implementada en taller de servicios
+
+    List<Ticket> findByUserEmailIgnoreCaseOrderByPurchaseDateDesc(String email);//Seccion 32, nueva busqueda implementada en taller de servicios
+
+    long countByEventEventCodeAndStatus(String eventCode, TicketStatus status);//Seccion 32, nueva busqueda implementada en taller de servicios
+
+
+
     
 } 
