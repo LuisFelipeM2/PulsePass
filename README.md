@@ -1,10 +1,12 @@
 # PulsePass 🎟️
 
-PulsePass es un sistema backend robusto desarrollado en Java con Spring Boot para la gestión integral de eventos, recintos, artistas y la comercialización de entradas (tickets). Este proyecto forma parte de un desarrollo académico enfocado en buenas prácticas de persistencia con Spring Data JPA, control de esquemas mediante migraciones, una capa de servicios con reglas de negocio y pruebas automatizadas rigurosas.
+PulsePass es un sistema backend robusto desarrollado en Java con Spring Boot para la gestión integral de eventos, recintos, artistas y la comercialización de entradas (tickets). Este proyecto forma parte de un desarrollo académico enfocado en buenas prácticas de persistencia con Spring Data JPA, control de esquemas mediante migraciones, una capa de servicios con reglas de negocio, una API REST con manejo uniforme de errores y pruebas automatizadas rigurosas.
 
 ## Tecnologías y Herramientas
 
 * **Java 21 / Spring Boot 4** (Framework principal)
+* **Spring MVC** (API REST: controllers y manejo global de excepciones)
+* **Bean Validation** (Validación de los requests HTTP)
 * **Spring Data JPA / Hibernate** (Capa de persistencia)
 * **PostgreSQL** (Base de datos relacional)
 * **Flyway** (Control de versiones y migraciones de base de datos)
@@ -12,6 +14,7 @@ PulsePass es un sistema backend robusto desarrollado en Java con Spring Boot par
 * **Lombok** (Reducción de código repetitivo en entidades)
 * **Maven** (Gestor de dependencias y construcción)
 * **JUnit Jupiter / Mockito / AssertJ** (Pruebas unitarias de la capa de servicios)
+* **MockMvc / `@WebMvcTest`** (Pruebas de contrato HTTP de los controllers)
 * **Spring Boot Test / Testcontainers** (Pruebas de integración de persistencia)
 
 ## 📂 Arquitectura y Estructura del Proyecto
@@ -19,37 +22,41 @@ PulsePass es un sistema backend robusto desarrollado en Java con Spring Boot par
 El proyecto sigue una arquitectura en capas tradicional orientada al dominio:
 
 ```text
-Controller (futuro) → Service → Repository → Entity → PostgreSQL
-                        │
-                        ├── DTOs (request / response)
-                        └── Mappers (MapStruct)
+HTTP → Controller → Service → Repository → Entity → PostgreSQL
+           │           │
+           │           ├── DTOs (request / response)
+           │           └── Mappers (MapStruct)
+           │
+           └── GlobalExceptionHandler (excepciones → ErrorResponse)
 ```
 
 ```text
 src/
 ├── main/
 │   ├── java/edu/unimagdalena/PulsePass/
+│   │   ├── controller/   # Controllers REST (Venue, Event, Artist, User, Ticket)
 │   │   ├── domain/       # Entidades JPA y enums (User, Event, Venue, Ticket, etc.)
 │   │   ├── repository/   # Repositorios Spring Data JPA con consultas JPQL avanzadas
 │   │   ├── dto/
-│   │   │   ├── request/  # DTOs de entrada (records)
-│   │   │   └── response/ # DTOs de salida (records)
+│   │   │   ├── request/  # DTOs de entrada (records, con Bean Validation)
+│   │   │   └── response/ # DTOs de salida (records) y ErrorResponse
 │   │   ├── mapper/       # Mappers MapStruct (entidad → DTO)
-│   │   ├── exception/    # Excepciones de dominio
+│   │   ├── exception/    # Excepciones de dominio y GlobalExceptionHandler
 │   │   └── service/      # Interfaces de los servicios con las implementaciones de las reglas de negocio
-│   │      
+│   │
 │   └── resources/
 │       ├── db/migration/ # Scripts de migración SQL de Flyway
 │       └── application.yaml # Configuración de entorno y base de datos
 └── test/
     └── java/edu/unimagdalena/PulsePass/
         ├── repository/   # Pruebas de integración y persistencia (*IT.java)
-        └── service/ # Pruebas unitarias de los servicios (Mockito)
+        ├── service/      # Pruebas unitarias de los servicios (Mockito)
+        └── controller/   # Pruebas de contrato HTTP de los controllers (@WebMvcTest + MockMvc)
 ```
 
 ## 🧩 Capa de Servicios
 
-La capa de servicios es la frontera entre las futuras capas de exposición (controllers) y el modelo persistente. Aplica las reglas de negocio, coordina los repositories, controla las transacciones y retorna DTOs sin exponer entidades JPA.
+La capa de servicios es la frontera entre la capa de controllers y el modelo persistente. Aplica las reglas de negocio, coordina los repositories, controla las transacciones y retorna DTOs sin exponer entidades JPA.
 
 | Servicio | Responsabilidad |
 |---|---|
@@ -84,6 +91,97 @@ Evento:  DRAFT → PUBLISHED → SOLD_OUT → FINISHED
 Ticket:  PAID → USED
          PAID → CANCELLED
 ```
+
+## 🌐 Capa de Controladores (API REST)
+
+La capa de controllers expone por HTTP los 20 métodos de los servicios. Es una capa delgada: traduce la petición HTTP a una llamada al Service y devuelve la respuesta como DTO. No contiene reglas de negocio, no accede a repositories y no retorna entidades JPA.
+
+| Controller | Servicio que consume | Endpoints |
+|---|---|---|
+| `VenueController` | `VenueService` | 2 |
+| `EventController` | `EventService` | 6 |
+| `ArtistController` | `ArtistService` | 3 |
+| `UserController` | `UserService` | 3 |
+| `TicketController` | `TicketService` | 6 |
+
+### Endpoints principales
+
+| Método | Endpoint | Operación | Respuesta exitosa |
+|---|---|---|---|
+| GET | `/api/venues/{code}` | Consultar venue por código | 200 |
+| GET | `/api/venues/active` | Listar venues activos | 200 |
+| POST | `/api/events` | Crear evento | 201 |
+| GET | `/api/events/{eventCode}` | Consultar evento por código | 200 |
+| GET | `/api/events/published` | Listar eventos publicados | 200 |
+| PATCH | `/api/events/{eventCode}/publish` | Publicar evento | 200 |
+| POST | `/api/events/{eventCode}/artists/{artistId}` | Asociar artista a un evento | 200 |
+| GET | `/api/events/by-artist?stageName=...` | Buscar eventos por artista | 200 |
+| GET | `/api/artists/{id}` | Consultar artista por id | 200 |
+| GET | `/api/artists/by-stage-name?stageName=...` | Consultar artista por nombre artístico | 200 |
+| GET | `/api/artists/active` | Listar artistas activos | 200 |
+| POST | `/api/users` | Registrar usuario | 201 |
+| GET | `/api/users/by-email?email=...` | Consultar usuario por email | 200 |
+| GET | `/api/users/by-username?username=...` | Consultar usuario por username | 200 |
+| POST | `/api/tickets` | Comprar ticket | 201 |
+| GET | `/api/tickets/{ticketCode}` | Consultar ticket por código | 200 |
+| GET | `/api/tickets/by-user?email=...` | Consultar tickets de un usuario | 200 |
+| GET | `/api/events/{eventCode}/tickets/paid` | Consultar tickets pagados de un evento | 200 |
+| PATCH | `/api/tickets/{ticketCode}/cancel` | Cancelar ticket | 200 |
+| PATCH | `/api/tickets/{ticketCode}/use` | Marcar ticket como usado | 200 |
+
+> El endpoint `GET /api/events/{eventCode}/tickets/paid` vive en `TicketController` porque consume `TicketService`, aunque su ruta empiece por `/api/events`.
+
+### Ejemplo: comprar un ticket
+
+```http
+POST /api/tickets
+Content-Type: application/json
+
+{
+  "userEmail": "andrea@email.com",
+  "eventCode": "CMF-2026",
+  "type": "VIP"
+}
+```
+
+El precio no se envía: lo calcula el sistema según el tipo de ticket. Respuesta `201 Created` con un `TicketResponse`.
+
+### Validación de entrada
+
+Los requests (`CreateEventRequest`, `RegisterUserRequest` y `PurchaseTicketRequest`) se validan con Bean Validation (`@Valid`) antes de llegar al Service: campos obligatorios, formato de email, longitud máxima y valores mínimos. Un request inválido responde `400` y nunca invoca al Service. Las reglas de negocio (usuario activo, edad mínima, capacidad, transiciones de estado) siguen viviendo en la capa de servicios.
+
+### Códigos HTTP y manejo de errores
+
+Todos los errores se convierten en un `ResponseEntity<ErrorResponse>` desde un único `GlobalExceptionHandler` (`@RestControllerAdvice`), sin `try/catch` en los controllers.
+
+| Situación | Excepción | Código |
+|---|---|---|
+| Request inválido (Bean Validation) | `MethodArgumentNotValidException` | 400 |
+| JSON mal formado o enum inválido | `HttpMessageNotReadableException` | 400 |
+| Parámetro con tipo inválido | `MethodArgumentTypeMismatchException` | 400 |
+| Recurso inexistente | `ResourceNotFoundException` | 404 |
+| Duplicado (username o email) | `DuplicateResourceException` | 409 |
+| Regla de negocio incumplida | `BusinessRuleException` | 409 |
+| Error inesperado | `Exception` | 500 |
+
+Formato uniforme de error (el campo `details` solo trae datos en errores de validación):
+
+```json
+{
+  "timestamp": "2026-10-10T20:00:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Request validation failed",
+  "details": {
+    "eventCode": "Event code is required",
+    "venueCode": "Venue code is required"
+  }
+}
+```
+
+### Alcance de esta versión
+
+La API no incluye autenticación ni autorización, paginación, versionado de rutas (`/api/v1`) ni documentación OpenAPI. Todos los endpoints son públicos.
 
 # ⚙️ Configuración y Requisitos Previos
 Antes de ejecutar el proyecto, asegúrate de contar con lo siguiente instalado en tu equipo:
@@ -120,10 +218,24 @@ $env:DB_USER="tu_usuario"
 $env:DB_PASSWORD="tu_contraseña"
 ```
 
+# 🚀 Ejecución de la Aplicación
+Con la base de datos configurada, levanta la API con Maven:
+
+```bash
+mvn spring-boot:run
+```
+
+Por defecto queda disponible en `http://localhost:8080`. Ejemplo para consultar los eventos publicados:
+
+```bash
+curl http://localhost:8080/api/events/published
+```
+
 #  🧪 Ejecución de Pruebas
-El proyecto cuenta con dos tipos de pruebas:
+El proyecto cuenta con tres tipos de pruebas:
 
 * **Pruebas unitarias de servicios** (`src/test/.../service/impl`): usan JUnit Jupiter, Mockito y AssertJ con repositories y mappers simulados. No levantan Spring ni PostgreSQL, por lo que no requieren Docker.
+* **Pruebas de controllers** (`src/test/.../controller`): usan `@WebMvcTest`, `MockMvc` y los Services reemplazados con `@MockitoBean`. Validan el contrato HTTP (código de estado, `Content-Type`, JSON con `jsonPath`, `ErrorResponse`) y que un request inválido no llegue al Service. No requieren PostgreSQL ni Docker.
 * **Pruebas de integración de persistencia** (`src/test/.../repository`, clases `*IT`): validan el modelo de datos, las restricciones UNIQUE y CHECK y las consultas personalizadas JPQL sobre un PostgreSQL levantado con Testcontainers. Requieren Docker en ejecución.
 
 Ejecuta todas las pruebas con Maven:
@@ -138,6 +250,12 @@ Para ejecutar solo las pruebas unitarias de los servicios:
 mvn test "-Dtest=*ServiceImplTest"
 ```
 
+Para ejecutar solo las pruebas de los controllers:
+
+```bash
+mvn test "-Dtest=*ControllerTest"
+```
+
 Para comprobar únicamente que el código compila (sin ejecutar pruebas ni requerir Docker):
 
 ```bash
@@ -149,6 +267,6 @@ El control del esquema se maneja estrictamente mediante scripts versionados ubic
 
 ## 👥 Autores
 
-* **Julio Cesar Carrillo Correa** - *Desarrollo Backend / Capa de Persistencia y Servicios*
-* **Luis Felipe Muñoz Camacho** - *Desarrollo Backend / Capa de Persistencia y Servicios*
+* **Julio Cesar Carrillo Correa** - *Desarrollo Backend / Capa de Persistencia, Servicios y Controladores*
+* **Luis Felipe Muñoz Camacho** - *Desarrollo Backend / Capa de Persistencia, Servicios y Controladores*
 * Universidad del Magdalena
