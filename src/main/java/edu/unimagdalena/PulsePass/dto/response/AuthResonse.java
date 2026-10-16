@@ -1,5 +1,5 @@
 package edu.unimagdalena.PulsePass.dto.response;
 
-public class AuthResonse {
-    
-}
+public record AuthResonse(String accessToken, String tokenType, long expiresIn) 
+{
+} 

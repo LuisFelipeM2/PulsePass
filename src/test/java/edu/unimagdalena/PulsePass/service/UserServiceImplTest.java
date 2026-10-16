@@ -54,7 +54,7 @@ class UserServiceImplTest {
     //Datos de prueba
 
     private RegisterUserRequest request(LocalDate birthDate) {
-        return new RegisterUserRequest(USERNAME, EMAIL, "Andrea", "Perez",
+        return new RegisterUserRequest(USERNAME, EMAIL, "contraseña123", "Andrea", "Perez",
                 "3001788548", "Santa Marta", birthDate);
     }
 

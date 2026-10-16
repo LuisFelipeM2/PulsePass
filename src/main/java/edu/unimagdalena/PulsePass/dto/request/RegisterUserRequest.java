@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 // Sección 19: RegisterUserRequest
 // NFR-003: DTO inmutable implementado como record.
@@ -16,6 +17,10 @@ public record RegisterUserRequest(
         @NotBlank(message = "Email is required")
         @Email (message = "Email format is invalid")
         String email,
+
+        @NotBlank
+        @Size(min = 12, max = 72)
+        String password,
 
         @NotBlank(message = "First name is required")
         String firstName,
