@@ -1,5 +1,8 @@
 package edu.unimagdalena.PulsePass.exception;
 
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -121,4 +124,23 @@ public class GlobalExceptionHandler {
                 Map.of());
         return ResponseEntity.status(status).body(error);
     }
+    @ExceptionHandler(AccessDeniedException.class)
+        public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+        ErrorResponse body = new ErrorResponse(
+            LocalDateTime.now(), 403, "Forbidden",
+            "No tiene permisos para realizar esta operación", Map.of());
+         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+}
+
+@ExceptionHandler(AuthenticationException.class) // incluye BadCredentialsException
+public ResponseEntity<ErrorResponse> handleAuthentication(AuthenticationException ex) {
+    HttpStatus status = HttpStatus.UNAUTHORIZED;
+    ErrorResponse error = new ErrorResponse(
+            LocalDateTime.now(),
+            status.value(),
+            status.getReasonPhrase(),
+            "Credenciales inválidas",   
+            Map.of());
+    return ResponseEntity.status(status).body(error);
+}
 }

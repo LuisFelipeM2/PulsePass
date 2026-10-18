@@ -21,9 +21,10 @@ import edu.unimagdalena.PulsePass.dto.response.ArtistResponse;
 import edu.unimagdalena.PulsePass.exception.GlobalExceptionHandler;
 import edu.unimagdalena.PulsePass.exception.ResourceNotFoundException;
 import edu.unimagdalena.PulsePass.service.ArtistService;
+import edu.unimagdalena.PulsePass.service.AuthorizationService;
 
 @WebMvcTest(ArtistController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, ControllerTestSecurityConfig.class})  
 class ArtistControllerTest {
 
     @Autowired
@@ -31,6 +32,9 @@ class ArtistControllerTest {
 
     @MockitoBean
     private ArtistService service;
+
+    @MockitoBean
+    private AuthorizationService authorizationService;
 
     // Artistas de referencia (sección 23.3): Solar Beat, Neon Waves, Caribbean Sound
     private ArtistResponse buildResponse(Long id, String stageName) {

@@ -3,6 +3,7 @@ package edu.unimagdalena.PulsePass.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -20,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -30,10 +32,11 @@ import edu.unimagdalena.PulsePass.dto.response.TicketResponse;
 import edu.unimagdalena.PulsePass.exception.BusinessRuleException;
 import edu.unimagdalena.PulsePass.exception.GlobalExceptionHandler;
 import edu.unimagdalena.PulsePass.exception.ResourceNotFoundException;
+import edu.unimagdalena.PulsePass.service.AuthorizationService;
 import edu.unimagdalena.PulsePass.service.TicketService;
 
 @WebMvcTest(TicketController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, ControllerTestSecurityConfig.class}) 
 class TicketControllerTest {
 
     @Autowired
@@ -41,6 +44,9 @@ class TicketControllerTest {
 
     @MockitoBean
     private TicketService service;
+
+    @MockitoBean
+        private AuthorizationService authorizationService;
 
     // Escenario de referencia (sección 23): Andrea compra para CMF-2026
     private TicketResponse buildResponse(TicketStatus status) {
@@ -51,6 +57,7 @@ class TicketControllerTest {
 
     // TEST-CTRL-TKT-001 / AC-CTRL009
     @Test
+    @WithMockUser(roles = "USER")
     void shouldPurchaseTicket() throws Exception {
         when(service.purchase(any(PurchaseTicketRequest.class)))
                 .thenReturn(buildResponse(TicketStatus.PAID));
@@ -77,6 +84,7 @@ class TicketControllerTest {
 
     // TEST-CTRL-TKT-002
     @Test
+    @WithMockUser(roles = "USER")
     void shouldReturn400WhenPurchaseRequestIsInvalid() throws Exception {
         mockMvc.perform(post("/api/tickets")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -101,6 +109,7 @@ class TicketControllerTest {
 
     // TEST-CTRL-TKT-003
     @Test
+    @WithMockUser(roles = "USER")
     void shouldReturn404WhenUserDoesNotExist() throws Exception {
         when(service.purchase(any(PurchaseTicketRequest.class)))
                 .thenThrow(new ResourceNotFoundException("User", "ghost@email.com"));
@@ -126,6 +135,7 @@ class TicketControllerTest {
 
     // TEST-CTRL-TKT-004 / AC-CTRL010
     @Test
+    @WithMockUser(roles = "USER")
     void shouldReturn409WhenPurchaseViolatesBusinessRule() throws Exception {
         when(service.purchase(any(PurchaseTicketRequest.class)))
                 .thenThrow(new BusinessRuleException("User does not meet minimum age."));
@@ -151,6 +161,7 @@ class TicketControllerTest {
 
     // TEST-CTRL-TKT-005
     @Test
+    @WithMockUser(roles = "USER")
     void shouldReturnTicketByCode() throws Exception {
         when(service.findByCode("TKT-001")).thenReturn(buildResponse(TicketStatus.PAID));
 
@@ -166,6 +177,7 @@ class TicketControllerTest {
 
     // TEST-CTRL-TKT-006
     @Test
+    @WithMockUser(roles = "USER")
     void shouldReturnTicketsByUserEmail() throws Exception {
         when(service.findByUserEmail("andrea@email.com"))
                 .thenReturn(List.of(buildResponse(TicketStatus.PAID)));
@@ -181,6 +193,7 @@ class TicketControllerTest {
 
     // TEST-CTRL-TKT-007
     @Test
+    @WithMockUser(roles = "STAFF")
     void shouldReturnPaidTicketsByEvent() throws Exception {
         when(service.findPaidTicketsByEvent("CMF-2026"))
                 .thenReturn(List.of(buildResponse(TicketStatus.PAID)));
@@ -197,6 +210,7 @@ class TicketControllerTest {
 
     // TEST-CTRL-TKT-008 / AC-CTRL011
     @Test
+    @WithMockUser(roles = "USER")
     void shouldCancelTicket() throws Exception {
         when(service.cancel("TKT-001")).thenReturn(buildResponse(TicketStatus.CANCELLED));
 
@@ -210,6 +224,7 @@ class TicketControllerTest {
 
     // TEST-CTRL-TKT-009 / AC-CTRL012
     @Test
+    @WithMockUser(roles = "USER")
     void shouldReturn409WhenTicketCannotBeCancelled() throws Exception {
         when(service.cancel("TKT-001"))
                 .thenThrow(new BusinessRuleException("Only PAID tickets can be cancelled"));
@@ -227,6 +242,8 @@ class TicketControllerTest {
 
     // TEST-CTRL-TKT-010 / AC-CTRL013
     @Test
+    
+    @WithMockUser(roles = "STAFF")
     void shouldMarkTicketAsUsed() throws Exception {
         when(service.markAsUsed("TKT-001")).thenReturn(buildResponse(TicketStatus.USED));
 
@@ -240,6 +257,7 @@ class TicketControllerTest {
 
     // TEST-CTRL-TKT-011 / AC-CTRL014
     @Test
+    @WithMockUser(roles = "STAFF")
     void shouldReturn409WhenTicketCannotBeUsed() throws Exception {
         when(service.markAsUsed("TKT-001"))
                 .thenThrow(new BusinessRuleException("Only PAID tickets can be used"));
@@ -254,4 +272,11 @@ class TicketControllerTest {
 
         verify(service).markAsUsed("TKT-001");
     }
+        @Test
+        @WithMockUser(roles = "USER")
+        void useTicket_asUser_returns403() throws Exception {
+                mockMvc.perform(patch("/api/tickets/{ticketCode}/use", "TKT-001"))
+                .andExpect(status().isForbidden());
+                verifyNoInteractions(service);
+        }
 }
