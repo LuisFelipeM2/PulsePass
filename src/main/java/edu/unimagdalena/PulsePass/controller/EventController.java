@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,9 +14,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import edu.unimagdalena.PulsePass.domain.EventStatus;
 import edu.unimagdalena.PulsePass.dto.request.CreateEventRequest;
 import edu.unimagdalena.PulsePass.dto.response.EventResponse;
 import edu.unimagdalena.PulsePass.dto.response.EventSummaryResponse;
+import edu.unimagdalena.PulsePass.exception.ResourceNotFoundException;
+import edu.unimagdalena.PulsePass.security.SecurityPrincipal;
+import edu.unimagdalena.PulsePass.service.AuthorizationService;
 import edu.unimagdalena.PulsePass.service.EventService;
 import jakarta.validation.Valid;
 
@@ -24,9 +29,11 @@ import jakarta.validation.Valid;
 public class EventController {
 
     private final EventService eventService;
+    private final AuthorizationService authorizationService;
 
-    public EventController(EventService eventService) {
+    public EventController(EventService eventService, AuthorizationService authorizationService) {
         this.eventService = eventService;
+        this.authorizationService = authorizationService;
     }
 
     // FR-CTRL-EVT-001: 201 Created. @Valid hace que Bean Validation corra antes del Service (CTRL-005).
@@ -42,16 +49,29 @@ public class EventController {
     }
 
     // FR-CTRL-EVT-006: búsqueda por nombre artístico.
-    @GetMapping("/by-artist")
-    public ResponseEntity<List<EventSummaryResponse>> findByArtist(@RequestParam String stageName) {
-        return ResponseEntity.ok(eventService.findByArtist(stageName));
+   @GetMapping("/by-artist")
+    public ResponseEntity<List<EventSummaryResponse>> findByArtist(@RequestParam String stageName,
+                                                        @AuthenticationPrincipal SecurityPrincipal principal) {
+    List<EventSummaryResponse> events = eventService.findByArtist(stageName);
+    // FR-SECEVT-06: el público solo ve publicados
+    if (!authorizationService.canSeeUnpublishedEvents(principal)) {
+        events = events.stream().filter(e -> e.status() == EventStatus.PUBLISHED).toList();
     }
+    return ResponseEntity.ok(events);
+}
 
     // FR-CTRL-EVT-002: 200 si existe, 404 si no.
     @GetMapping("/{eventCode}")
-    public ResponseEntity<EventResponse> findByCode(@PathVariable String eventCode) {
-        return ResponseEntity.ok(eventService.findByCode(eventCode));
+public ResponseEntity<EventResponse> findByCode(@PathVariable String eventCode,
+                                                @AuthenticationPrincipal SecurityPrincipal principal) {
+    EventResponse event = eventService.findByCode(eventCode);
+    // FR-SECEVT-02: un borrador se responde como si no existiera
+    if (event.status() != EventStatus.PUBLISHED
+            && !authorizationService.canSeeUnpublishedEvents(principal)) {
+        throw new ResourceNotFoundException("Event", eventCode );
     }
+    return ResponseEntity.ok(event);
+}
 
     // FR-CTRL-EVT-004: 200 si la transición es válida; 409 si el Service rechaza por regla de negocio.
     @PatchMapping ("/{eventCode}/publish")

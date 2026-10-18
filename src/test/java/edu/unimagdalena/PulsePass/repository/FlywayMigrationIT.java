@@ -31,7 +31,7 @@ class FlywayMigrationIT {
                 Integer.class
         );
  
-        assertThat(countAplicadas).isEqualTo(3); // V1, V2, V3
+        assertThat(countAplicadas).isEqualTo(4); // V1, V2, V3
     }
  
     // Comprueba que las 7 tablas del esquema relacional (seccion 7 del PRD)

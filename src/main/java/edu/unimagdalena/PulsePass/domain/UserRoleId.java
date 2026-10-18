@@ -2,7 +2,7 @@ package edu.unimagdalena.PulsePass.domain;
 
 import java.io.Serializable;
 
-import javax.management.relation.Role;
+
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -17,7 +17,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Embeddable 
-@Entity 
 @Getter 
 @Setter 
 @NoArgsConstructor 

@@ -3,6 +3,7 @@ package edu.unimagdalena.PulsePass.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -19,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -31,10 +33,11 @@ import edu.unimagdalena.PulsePass.dto.response.EventSummaryResponse;
 import edu.unimagdalena.PulsePass.exception.BusinessRuleException;
 import edu.unimagdalena.PulsePass.exception.GlobalExceptionHandler;
 import edu.unimagdalena.PulsePass.exception.ResourceNotFoundException;
+import edu.unimagdalena.PulsePass.service.AuthorizationService;
 import edu.unimagdalena.PulsePass.service.EventService;
 
 @WebMvcTest(EventController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, ControllerTestSecurityConfig.class})   
 class EventControllerTest {
 
     @Autowired
@@ -42,6 +45,22 @@ class EventControllerTest {
 
     @MockitoBean
     private EventService service;
+
+    @MockitoBean
+        private AuthorizationService authorizationService;
+
+
+     private static final String VALID_EVENT_BODY = """
+        {
+          "eventCode": "CMF-2026",
+          "name": "Caribbean Music Fest 2026",
+          "description": "Festival de musica caribena",
+          "category": "MUSIC",
+          "eventDate": "2026-12-15T20:00:00",
+          "minimumAge": 18,
+          "venueCode": "VEN-SMR-01"
+        }
+        """;
 
     // Evento de referencia (sección 23.2): Caribbean Music Fest 2026
     private EventResponse buildResponse(EventStatus status, List<ArtistResponse> artists) {
@@ -59,6 +78,7 @@ class EventControllerTest {
 
     // TEST-CTRL-EVT-001 / AC-CTRL003
     @Test
+    @WithMockUser(roles = "ADMIN")
     void shouldCreateEvent() throws Exception {
         when(service.create(any(CreateEventRequest.class)))
                 .thenReturn(buildResponse(EventStatus.DRAFT, List.of()));
@@ -86,6 +106,7 @@ class EventControllerTest {
 
     // TEST-CTRL-EVT-002
     @Test
+    @WithMockUser(roles = "ADMIN")
     void shouldReturn400WhenCreateRequestIsInvalid() throws Exception {
         mockMvc.perform(post("/api/events")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -118,7 +139,7 @@ class EventControllerTest {
     @Test
     void shouldReturnEventByCode() throws Exception {
         when(service.findByCode("CMF-2026"))
-                .thenReturn(buildResponse(EventStatus.DRAFT, List.of()));
+                .thenReturn(buildResponse(EventStatus.PUBLISHED, List.of()));
 
         mockMvc.perform(get("/api/events/{eventCode}", "CMF-2026"))
                 .andExpect(status().isOk())
@@ -164,6 +185,7 @@ class EventControllerTest {
 
     // TEST-CTRL-EVT-006 / AC-CTRL005
     @Test
+    @WithMockUser(roles = "ADMIN")
     void shouldPublishEvent() throws Exception {
         when(service.publish("CMF-2026"))
                 .thenReturn(buildResponse(EventStatus.PUBLISHED, List.of()));
@@ -178,6 +200,7 @@ class EventControllerTest {
 
     // TEST-CTRL-EVT-007 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void shouldReturn409WhenEventCannotBePublished() throws Exception {
         when(service.publish("CMF-2026"))
                 .thenThrow(new BusinessRuleException("Only DRAFT events can be published"));
@@ -195,6 +218,7 @@ class EventControllerTest {
 
     // TEST-CTRL-EVT-008
     @Test
+    @WithMockUser(roles = "ADMIN")
     void shouldAddArtistToEvent() throws Exception {
         ArtistResponse solarBeat = new ArtistResponse(1L, "Solar Beat", "Colombia", "Pop", true);
         when(service.addArtist("CMF-2026", 1L))
@@ -222,4 +246,27 @@ class EventControllerTest {
 
         verify(service).findByArtist("Solar Beat");
     }
+
+    // T-SEC-002
+        @Test
+        void createEvent_anonymous_returns401() throws Exception {
+        mockMvc.perform(post("/api/events")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_EVENT_BODY))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(service);
+        }
+
+        // T-SEC-003
+        @Test
+        @WithMockUser(roles = "USER")
+        void createEvent_asUser_returns403() throws Exception {
+        mockMvc.perform(post("/api/events")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_EVENT_BODY))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(service);
+        }
 }

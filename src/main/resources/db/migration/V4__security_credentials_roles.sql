@@ -20,4 +20,3 @@ CREATE TABLE user_roles (
         CHECK (role IN ('USER', 'STAFF', 'ADMIN'))
 );
 
-.
