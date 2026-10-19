@@ -109,7 +109,8 @@ public class TicketServiceImpl implements TicketService {
         }
 
         Ticket ticket = Ticket.builder()
-                .ticketCode("TKT-" + UUID.randomUUID())
+                // La columna ticket_code admite 30 caracteres: prefijo TKT- + 26 hexadecimales.
+                .ticketCode("TKT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 26))
                 .type(request.type())
                 .price(price)
                 // Sección 27: una compra válida genera un ticket PAID.

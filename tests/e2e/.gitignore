@@ -1,0 +1,10 @@
+# Nunca versionar secretos ni evidencias con datos sensibles
+*.env
+.env*
+*token*
+*.local.*
+evidencia/
+capturas/
+# Exports de Postman con valores reales
+*.postman_environment.local.json
+*_with_values*.json

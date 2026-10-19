@@ -1,0 +1,7 @@
+# Use this workspace to collaborate
+workspace:
+  id: 6025f3df-e886-4787-8886-09a8735b4096
+
+localResources:
+  environments:
+    - ../tests/e2e/postman/PulsePass-local.postman_environment.json
