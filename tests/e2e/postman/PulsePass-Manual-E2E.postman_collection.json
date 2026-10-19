@@ -1,0 +1,674 @@
+﻿{
+    "info":  {
+                 "_postman_id":  "f64ce50c-890a-4a7a-8756-49a29301d9f1",
+                 "name":  "PulsePass — E2E Manual",
+                 "description":  "Fase 5. Ejecutar cada request manualmente con Send. No hay scripts, tests ni captura automática de tokens. Completar variables desde fixtures locales aprobados y verificar Status, Body y estado posterior.",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "variable":  [
+
+                 ],
+    "item":  [
+                 {
+                     "name":  "01 Venues (2 rutas)",
+                     "item":  [
+                                  {
+                                      "name":  "Consultar venue por código",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/venues/{{venueActiveCode}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "venues",
+                                                                               "{{venueActiveCode}}"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-VEN-01. ANONYMOUS. Precondición: venue activo preparado. Esperado 200; verifica código y datos contra fixture. Código inexistente: 404."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Listar venues activos",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/venues/active",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "venues",
+                                                                               "active"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-VEN-02. ANONYMOUS. Esperado 200 y solo venues activos."
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "02 Artists (3 rutas)",
+                     "item":  [
+                                  {
+                                      "name":  "Consultar artista por ID",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/artists/{{artistId}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "artists",
+                                                                               "{{artistId}}"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-ART-01. ANONYMOUS. Esperado 200; ID inexistente 404."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Consultar artista por nombre artístico",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/artists/by-stage-name?stageName={{artistStageName}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "artists",
+                                                                               "by-stage-name"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "stageName",
+                                                                                    "value":  "{{artistStageName}}"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "ID E2E-ART-02. ANONYMOUS. Esperado 200; usa stageName real del fixture."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Listar artistas activos",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/artists/active",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "artists",
+                                                                               "active"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-ART-03. ANONYMOUS. Esperado 200 y artistas activos."
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "03 Registro, autenticación y JWT (3 solicitudes)",
+                     "item":  [
+                                  {
+                                      "name":  "Registrar USER_A",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"username\": \"{{userAUsername}}\",\n  \"email\": \"{{userAEmail}}\",\n  \"password\": \"{{userAPassword}}\",\n  \"firstName\": \"Usuario\",\n  \"lastName\": \"Prueba A\",\n  \"phone\": \"3000000000\",\n  \"city\": \"Santa Marta\",\n  \"birthDate\": \"1998-05-15\"\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/users",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "users"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-USR-01 / TC-AUTH-001. ANONYMOUS. Esperado 201. Password mínimo 12 caracteres según RegisterUserRequest. Rol asignado por servidor; verificar que sea USER. Duplicado 409. Login posterior manual. Reutiliza esta misma solicitud manualmente para USER_B con sus variables propias."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Login USER_A",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"identifier\": \"{{userAUsername}}\",\n  \"password\": \"{{userAPassword}}\"\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/auth/login",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "auth",
+                                                                               "login"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID TC-AUTH-002. Esperado 200 y AuthResponse {accessToken, tokenType, expiresIn}. Copiar accessToken a userAToken manualmente; no hay script de Postman. Reenvía manualmente con las credenciales de USER_B, STAFF o ADMIN y guarda cada token en su variable local."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Consultar identidad actual (me)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{userAToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/auth/me",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "auth",
+                                                                               "me"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-AUTH-02 / TC-AUTH-006. Cambia manualmente Bearer al token de cada actor. Esperado 200 y {id, username, roles}; no debe exponer credenciales. Sin token/token inválido: 401."
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "04 Usuarios / consulta y propiedad (2 rutas)",
+                     "item":  [
+                                  {
+                                      "name":  "Consultar usuario por email",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{userAToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/users/by-email?email={{userAEmail}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "users",
+                                                                               "by-email"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "email",
+                                                                                    "value":  "{{userAEmail}}"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "ID E2E-USR-02. USER_A consulta su email: esperado 200. Repetir con USER_B consultando A: esperar 404 según AuthorizationService; no exponer datos."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Consultar usuario por username",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{userAToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/users/by-username?username={{userAUsername}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "users",
+                                                                               "by-username"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "username",
+                                                                                    "value":  "{{userAUsername}}"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "ID E2E-USR-03. USER_A consulta su username: esperado 200. Repetir con USER_B consultando A para comprobar 404 anti-IDOR según AuthorizationService."
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "05 Events / administración y visibilidad (6 rutas)",
+                     "item":  [
+                                  {
+                                      "name":  "Crear evento borrador",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{adminToken}}"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"eventCode\": \"{{newEventCode}}\",\n  \"name\": \"PulsePass E2E {{runId}}\",\n  \"description\": \"Evento de prueba manual\",\n  \"category\": \"MUSIC\",\n  \"eventDate\": \"2030-12-01T19:00:00\",\n  \"minimumAge\": 0,\n  \"venueCode\": \"{{venueActiveCode}}\"\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/events",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "events"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-EVT-01. ADMIN Bearer. Esperado 201; status inicia DRAFT (não enviar status no request). Validar DTO real e consultar depois. USER/visitante testado en TC-SEC-001."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Listar eventos publicados",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/events/published",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "events",
+                                                                               "published"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-EVT-03. ANONYMOUS. Esperado 200; no debe incluir borradores."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Consultar evento por código",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/events/{{publishedEventCode}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "events",
+                                                                               "{{publishedEventCode}}"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-EVT-02. Público: usar publishedEventCode y esperar 200. Repetir con draftEventCode: visitante debe recibir 404; ADMIN puede consultar borrador según lógica actual."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Asociar artista al evento",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{adminToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/events/{{newEventCode}}/artists/{{artistId}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "events",
+                                                                               "{{newEventCode}}",
+                                                                               "artists",
+                                                                               "{{artistId}}"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-EVT-05. ADMIN. Esperado 200 si asociación válida; comprobar relación con consulta posterior. Duplicada/regla de estado: 409. USER y STAFF deben probar denegación."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Publicar evento",
+                                      "request":  {
+                                                      "method":  "PATCH",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{adminToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/events/{{eventToPublishCode}}/publish",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "events",
+                                                                               "{{eventToPublishCode}}",
+                                                                               "publish"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-EVT-04. ADMIN. Precondición: DRAFT, fecha futura y venue activo. Esperado 200; repetir GET para verificar PUBLISHED y visibilidad pública."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Buscar eventos por artista",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/events/by-artist?stageName={{artistStageName}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "events",
+                                                                               "by-artist"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "stageName",
+                                                                                    "value":  "{{artistStageName}}"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "ID E2E-EVT-06. ANONYMOUS ve solo eventos publicados. Comparar con ADMIN autorizado y fixture de borrador."
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "06 Tickets / compra, consulta y ciclo de vida (6 rutas)",
+                     "item":  [
+                                  {
+                                      "name":  "Comprar ticket propio",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{userAToken}}"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"userEmail\": \"{{userAEmail}}\",\n  \"eventCode\": \"{{publishedEventCode}}\",\n  \"type\": \"GENERAL\"\n}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/tickets",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "tickets"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-TKT-01 / TC-BIZ-007. USER_A compra para sí mismo en evento futuro publicado. Esperado 201 y ticket vinculado a A/evento. Precio lo calcula el servicio. No uses email de B con token A: debe denegar y no crear ticket."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Consultar ticket por código",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{userAToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/tickets/{{ticketA}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "tickets",
+                                                                               "{{ticketA}}"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-TKT-02. USER_A lee ticket propio: 200. Repetir como USER_B: 404 anti-IDOR según AuthorizationService."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Listar tickets propios por email",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{userAToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/tickets/by-user?email={{userAEmail}}",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "tickets",
+                                                                               "by-user"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "email",
+                                                                                    "value":  "{{userAEmail}}"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "ID E2E-TKT-03. USER_A consulta su lista: 200. USER_B consultando A debe recibir 404 según AuthorizationService."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Listar tickets pagados del evento",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Accept",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{staffToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/events/{{publishedEventCode}}/tickets/paid",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "events",
+                                                                               "{{publishedEventCode}}",
+                                                                               "tickets",
+                                                                               "paid"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-TKT-04. STAFF o ADMIN: 200. USER y anónimo deben recibir 401/403 según autenticación. Verifica que solo aparezcan tickets PAID."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Cancelar ticket propio",
+                                      "request":  {
+                                                      "method":  "PATCH",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{userAToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/tickets/{{ticketA}}/cancel",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "tickets",
+                                                                               "{{ticketA}}",
+                                                                               "cancel"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-TKT-05 / TC-BIZ-010. USER_A cancela ticket PAID propio: esperado 200 y estado CANCELLED tras GET. Ticket ajeno responde 404 sin mutación; repetir cancelación 409."
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Marcar ticket como usado (STAFF)",
+                                      "request":  {
+                                                      "method":  "PATCH",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{staffToken}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{baseUrl}}/api/tickets/{{ticketB}}/use",
+                                                                  "host":  [
+                                                                               "{{baseUrl}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "tickets",
+                                                                               "{{ticketB}}",
+                                                                               "use"
+                                                                           ]
+                                                              },
+                                                      "description":  "ID E2E-TKT-06 / TC-BIZ-012. STAFF usa ticket PAID elegible distinto de ticket cancelado: 200 y estado USED al releer. USER/anónimo denegado. Segunda transición inválida 409."
+                                                  }
+                                  }
+                              ]
+                 }
+             ]
+}
+
